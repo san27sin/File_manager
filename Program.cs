@@ -36,7 +36,6 @@ namespace File_manager
         class memory
         {
             public static string currentDir;
-            public static List<string> commands;
         }
 
        
@@ -102,6 +101,11 @@ namespace File_manager
                 (int currentLeft, int currentRight) = GetCursorPosition();
 
                 //стирать последние буквы чтобы не заходило за рамки
+                if(keyInfo.Key == ConsoleKey.DownArrow)
+                {
+                    DrawConsole(GetShortPath(memory.currentDir), 4, 37, 36, 40);
+                }
+
 
                 if(currentLeft == width-4)
                 {
@@ -153,10 +157,6 @@ namespace File_manager
                 return;
             }
 
-            if(Console.Key)
-            {
-
-            }
 
             if (commandParams.Length > 0)
             {
@@ -169,7 +169,6 @@ namespace File_manager
                             {
                                 if (Directory.Exists(commandParams[1]))
                                 {
-                                    memory.commands.Add(commandParams[0] + " " + commandParams[1]);
                                     memory.currentDir = commandParams[1];
                                 }
                             }
@@ -182,12 +181,10 @@ namespace File_manager
                                 //Clean(2);
                                 if (commandParams.Length > 3 && commandParams[2] == "-p" && int.TryParse(commandParams[3], out int n))
                                 {
-                                    memory.commands.Add(commandParams[0] + " " + commandParams[1]+" "+commandParams[2]+" "+commandParams[3]);
                                     DrawTree(new DirectoryInfo(commandParams[1]), n);//указываем номер страниццы n
                                 }
                                 else
                                 {
-                                    memory.commands.Add(commandParams[0] + " " + commandParams[1]);
                                     DrawTree(new DirectoryInfo(commandParams[1]), 1);//указываем номер страниццы 1
                                 }
                             }
@@ -199,7 +196,6 @@ namespace File_manager
                             {
                                 if (File.Exists(memory.currentDir + "/" + commandParams[1]))//хорошо проверить что приходит на проверку
                                 {
-                                    memory.commands.Add(commandParams[0] + " " + commandParams[1] + " " + commandParams[2]);
                                     string fileName = commandParams[1];
                                     string sourcePath = memory.currentDir;
                                     string targetPath = commandParams[2];
@@ -212,7 +208,6 @@ namespace File_manager
 
                                 if (Directory.Exists(memory.currentDir + "/" + commandParams[1]))
                                 {
-                                    memory.commands.Add(commandParams[0] + " " + commandParams[1] + " " + commandParams[2]);
                                     CopyDirectory(memory.currentDir + "/" + commandParams[1], commandParams[2] + "/" + commandParams[1], true);
                                 }
                             }
@@ -224,13 +219,11 @@ namespace File_manager
                         case "rm":
                             if (Directory.Exists(memory.currentDir + "/" + commandParams[1]))
                             {
-                                memory.commands.Add(commandParams[0] + " " + commandParams[1]);
                                 //если правильно понял, то это рекурсивный метод во второй перегрузки
                                 Directory.Delete(memory.currentDir + "/" + commandParams[1], true);//подумать как сделать рекурсивно
                             }
                             if (File.Exists(memory.currentDir + "/" + commandParams[1]))
                             {
-                                memory.commands.Add(commandParams[0] + " " + commandParams[1]);
                                 File.Delete(memory.currentDir + "/" + commandParams[1]);
                             }
                             break;
