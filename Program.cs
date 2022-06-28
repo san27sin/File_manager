@@ -10,10 +10,6 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace File_manager
 {
-   /*Сделать перезатирание первого и второго окна
-    *1)написать метод для затирания окон
-    */
-     
    
     static class Program
     {
@@ -39,7 +35,6 @@ namespace File_manager
         }
 
        
-       // private static string currentDir = Directory.GetCurrentDirectory();
 
         //константные значения
         const int width = 120;
@@ -138,6 +133,10 @@ namespace File_manager
             ParseCommandString(command.ToString());
         }
 
+        /// <summary>
+        /// обработка коммандной строки
+        /// </summary>
+        /// <param name="command">команда</param>
         static void ParseCommandString(string command)
         {
             //Проверить метод
@@ -265,6 +264,10 @@ namespace File_manager
              UpdateConsole();
         }
         
+        /// <summary>
+        /// Читсит окно
+        /// </summary>
+        /// <param name="NumberOfTheWindow">номер окна</param>
         static void Clean(int NumberOfTheWindow)
         {
             int topS = 0, topF = 0, leftF = width - 4;
@@ -290,6 +293,12 @@ namespace File_manager
             }            
         }
         
+        /// <summary>
+        /// копирование директории
+        /// </summary>
+        /// <param name="sourceDir">источник</param>
+        /// <param name="destinationDir">конечная директория</param>
+        /// <param name="recursive">рекурсия на выбор</param>
         static void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
         {
             // Get information about the source directory
@@ -352,6 +361,13 @@ namespace File_manager
             Console.Write(footer);
         }
 
+        /// <summary>
+        /// Отрисовать дерево
+        /// </summary>
+        /// <param name="tree"></param>
+        /// <param name="dir"></param>
+        /// <param name="indent"></param>
+        /// <param name="lastDirectory"></param>
         static void GetTree(StringBuilder tree, DirectoryInfo dir, string indent, bool lastDirectory)
         {
             tree.Append(indent);
@@ -490,6 +506,12 @@ namespace File_manager
             return stringBuilder.ToString();
         }
 
+        /// <summary>
+        /// Напечатать дерево
+        /// </summary>
+        /// <param name="dir"></param>
+        /// <param name="indent"></param>
+        /// <param name="lastDirectory"></param>
         static void PrintDir(DirectoryInfo dir, string indent, bool lastDirectory)
         {
             Console.Write(indent);
@@ -539,7 +561,9 @@ namespace File_manager
             }
         }
 
-
+        /// <summary>
+        /// Консольный интерфейс
+        /// </summary>
         static public void ConsoleInterface()
         {
             Console.BackgroundColor = ConsoleColor.DarkBlue;
