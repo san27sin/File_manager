@@ -5,13 +5,15 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.Serialization.Formatters.Binary;
+
 
 namespace File_manager
 {
-    //Проблемы кода:
-    /*1)Не затирается текст в консоле после ввода 
-     *
-     */
+   /*Сделать перезатирание первого и второго окна
+    *1)написать метод для затирания окон
+    */
+     
    
     static class Program
     {
@@ -30,7 +32,15 @@ namespace File_manager
         [DllImport("kernel32.dll", ExactSpelling = true)]
         private static extern IntPtr GetConsoleWindow();
 
-        private static string currentDir = Directory.GetCurrentDirectory();
+        [Serializable]
+        class memory
+        {
+            public static string currentDir;
+            public static List<string> commands;
+        }
+
+       
+       // private static string currentDir = Directory.GetCurrentDirectory();
 
         //константные значения
         const int width = 120;
@@ -41,9 +51,25 @@ namespace File_manager
         {
             Console.Title = "File Manager";
 
+            if(File.Exists(Directory.GetCurrentDirectory() + "/directory.dat"))
+            {
+                BinaryFormatter formatter = new BinaryFormatter();
+                using (FileStream fs = new FileStream("directory.dat", FileMode.OpenOrCreate))
+                {
+                    memory.currentDir = formatter.Deserialize(fs) as string;
+                }
+            }
+            else
+            {
+                memory.currentDir = Directory.GetCurrentDirectory();
+            }
+
+
+            
+
             ConsoleInterface();
 
-
+           
             //дерево с файлами и каталогами
             DrawWindow(2, 20);
 
@@ -52,9 +78,6 @@ namespace File_manager
 
             //командная строка
             UpdateConsole();
-
-            Console.ReadKey(true);
-
         }
 
 
@@ -116,38 +139,196 @@ namespace File_manager
             //Проверить метод
 
             string[] commandParams = command.ToLower().Split(' ');
-            if(commandParams.Length > 0)
+
+            if (commandParams[0] == "exit")
             {
-                switch(commandParams[0])
+                // сделать сериализацию
+                // создаем объект BinaryFormatter
+                BinaryFormatter formatter = new BinaryFormatter();
+                // получаем поток, куда будем записывать сериализованный объект
+                using (FileStream fs = new FileStream("directory.dat", FileMode.OpenOrCreate))
                 {
-                    case "cd":
-                        if (commandParams.Length > 1)
-                        {
-                            if(Directory.Exists(commandParams[1]))
-                            {
-                                currentDir = commandParams[1];
-                            }                            
-                        }
-                        break;
-
-                    case "ls":
-                        if(commandParams.Length > 1 && Directory.Exists(commandParams[1]))
-                        {
-                            if(commandParams.Length > 3 && commandParams[2]=="-p" && int.TryParse(commandParams[3], out int n))
-                            {
-                                DrawTree(new DirectoryInfo(commandParams[1]),n);//указываем номер страниццы n
-                            }
-                            else
-                            {
-                                DrawTree(new DirectoryInfo(commandParams[1]), 1);//указываем номер страниццы 1
-                            }
-                        }
-                        break;
-                }                
+                    formatter.Serialize(fs, memory.currentDir);
+                }
+                return;
             }
-            UpdateConsole();
-        }
 
+            if(Console.Key)
+            {
+
+            }
+
+            if (commandParams.Length > 0)
+            {
+                try
+                {
+                    switch (commandParams[0])
+                    {
+                        case "cd":
+                            if (commandParams.Length > 1)
+                            {
+                                if (Directory.Exists(commandParams[1]))
+                                {
+                                    memory.commands.Add(commandParams[0] + " " + commandParams[1]);
+                                    memory.currentDir = commandParams[1];
+                                }
+                            }
+                            break;
+
+                        case "ls":
+                            Clean(1);
+                            if (commandParams.Length > 1 && Directory.Exists(commandParams[1]))
+                            {
+                                //Clean(2);
+                                if (commandParams.Length > 3 && commandParams[2] == "-p" && int.TryParse(commandParams[3], out int n))
+                                {
+                                    memory.commands.Add(commandParams[0] + " " + commandParams[1]+" "+commandParams[2]+" "+commandParams[3]);
+                                    DrawTree(new DirectoryInfo(commandParams[1]), n);//указываем номер страниццы n
+                                }
+                                else
+                                {
+                                    memory.commands.Add(commandParams[0] + " " + commandParams[1]);
+                                    DrawTree(new DirectoryInfo(commandParams[1]), 1);//указываем номер страниццы 1
+                                }
+                            }
+                            break;
+
+                        //копирование файлов и директорий
+                        case "cp":
+                            if (commandParams.Length == 3)
+                            {
+                                if (File.Exists(memory.currentDir + "/" + commandParams[1]))//хорошо проверить что приходит на проверку
+                                {
+                                    memory.commands.Add(commandParams[0] + " " + commandParams[1] + " " + commandParams[2]);
+                                    string fileName = commandParams[1];
+                                    string sourcePath = memory.currentDir;
+                                    string targetPath = commandParams[2];
+
+                                    string sourceFile = System.IO.Path.Combine(sourcePath, fileName);
+                                    string destFile = System.IO.Path.Combine(targetPath, fileName);
+                                    System.IO.File.Copy(sourceFile, destFile, true);
+                                    break;
+                                }
+
+                                if (Directory.Exists(memory.currentDir + "/" + commandParams[1]))
+                                {
+                                    memory.commands.Add(commandParams[0] + " " + commandParams[1] + " " + commandParams[2]);
+                                    CopyDirectory(memory.currentDir + "/" + commandParams[1], commandParams[2] + "/" + commandParams[1], true);
+                                }
+                            }
+                            break;
+                        //сделать исключение если файл не найдется.
+
+
+                        //удаление каталога рекурсивно (файл вроде не рукрсивно)
+                        case "rm":
+                            if (Directory.Exists(memory.currentDir + "/" + commandParams[1]))
+                            {
+                                memory.commands.Add(commandParams[0] + " " + commandParams[1]);
+                                //если правильно понял, то это рекурсивный метод во второй перегрузки
+                                Directory.Delete(memory.currentDir + "/" + commandParams[1], true);//подумать как сделать рекурсивно
+                            }
+                            if (File.Exists(memory.currentDir + "/" + commandParams[1]))
+                            {
+                                memory.commands.Add(commandParams[0] + " " + commandParams[1]);
+                                File.Delete(memory.currentDir + "/" + commandParams[1]);
+                            }
+                            break;
+
+                        case "file":
+                            //как быть с файлами которые в названиях имеют пробел(split их разделяет)
+                            if (File.Exists(memory.currentDir + "/" + commandParams[1]) || File.Exists(memory.currentDir + "/" + commandParams[1] + " " + commandParams[2]))
+                            {
+                                Clean(2);
+                                FileInfo file = new FileInfo(memory.currentDir + "/" + commandParams[1]);
+                                int count = 23;
+
+                                string[] fileInfo = new string[]
+                                {$"Полное имя: {file.FullName}.",
+                                $"Тип файла: {file.Extension}",
+                                $"Размер: {file.Length} byte.",
+                                $"Время создания файла: {file.CreationTime}.",
+                                $"Время изменения файла: {file.LastWriteTime}.",
+                                $"Время последнего просмотра: {file.LastAccessTime}",
+                                };
+
+                                foreach (string detail in fileInfo)
+                                {
+                                    Console.SetCursorPosition(4, count++);
+                                    Console.Write(detail);
+                                }
+                            }
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.SetCursorPosition(4, 23);
+                    Console.WriteLine(ex.Message);
+                }
+
+                  
+            }
+             UpdateConsole();
+        }
+        
+        static void Clean(int NumberOfTheWindow)
+        {
+            int topS = 0, topF = 0, leftF = width - 4;
+            switch(NumberOfTheWindow)
+            {
+                case 1:
+                    topS = 2;
+                    topF = 18;
+                    break;
+                case 2:
+                    topS = 23;
+                    topF = 33;
+                    break;
+            }
+            
+            for (; topS < topF; topS++)
+            {
+                for (int leftS = 4; leftS < leftF; leftS++)
+                {
+                    Console.SetCursorPosition(leftS, topS);
+                    Console.Write(" ");
+                }
+            }            
+        }
+        
+        static void CopyDirectory(string sourceDir, string destinationDir, bool recursive)
+        {
+            // Get information about the source directory
+            var dir = new DirectoryInfo(sourceDir);
+
+            // Check if the source directory exists
+            if (!dir.Exists)
+                throw new DirectoryNotFoundException($"Source directory not found: {dir.FullName}");
+
+            // Cache directories before we start copying
+            DirectoryInfo[] dirs = dir.GetDirectories();
+
+            // Create the destination directory
+            Directory.CreateDirectory(destinationDir);
+
+            // Get the files in the source directory and copy to the destination directory
+            foreach (FileInfo file in dir.GetFiles())
+            {
+                string targetFilePath = Path.Combine(destinationDir, file.Name);
+                file.CopyTo(targetFilePath);
+            }
+
+            // If recursive and copying subdirectories, recursively call this method
+            if (recursive)
+            {
+                foreach (DirectoryInfo subDir in dirs)
+                {
+                    string newDestinationDir = Path.Combine(destinationDir, subDir.Name);
+                    CopyDirectory(subDir.FullName, newDestinationDir, true);
+                }
+            }
+        }
 
         /// <summary>
         /// Отрисовать дерево каталога
@@ -279,7 +460,7 @@ namespace File_manager
         /// </summary>
         static void UpdateConsole()
         {
-            DrawConsole(GetShortPath(currentDir), 4, 37, 36, 40);
+            DrawConsole(GetShortPath(memory.currentDir), 4, 37, 36, 40);
             ProcessEnterCommand(width);
         }
 
